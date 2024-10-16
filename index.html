@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Link Viewer with Users and Posts</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif; /* Set a standard font */
+        }
+        .background-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1; /* Place the video behind the content */
+        }
+        .container {
+            margin-top: 20px;
+            z-index: 1; /* Ensure content is above the video */
+            overflow: auto; /* Enable scrolling */
+            height: calc(100vh - 20px); /* Adjust height to fit screen */
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+            border-radius: 15px;
+            backdrop-filter: blur(10px); /* Add blur effect */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #213261, #0a0d13); /* Gradient header */
+            color: rgb(166, 97, 245);
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+        .user-image {
+            border-radius: 50%;
+            width: 40px; /* Adjusted width for better appearance */
+            height: 40px; /* Adjusted height for better appearance */
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        .post-content {
+            background-color: rgba(56, 43, 43, 0.9); /* Semi-transparent post background */
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px; /* Space between posts */
+        }
+        .user-posts {
+            max-height: 300px; /* Set a maximum height for user posts */
+            overflow-y: auto; /* Enable scrolling for posts */
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <video autoplay muted loop class="background-video">
+        <source src="hologram.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h4>API Link Viewer with Users and Posts</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="apiForm">
+                            <div class="form-group">
+                                <label for="apiUrl">Enter API URL:</label>
+                                <input type="text" class="form-control" id="apiUrl" value="https://jsonplaceholder.typicode.com/posts" placeholder="Enter API URL">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Fetch Posts</button>
+                            <button type="button" class="btn btn-warning btn-block" id="refreshPostsBtn">Refresh Posts</button>
+                        </form>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button id="fetchUsersBtn" class="btn btn-secondary btn-block">Fetch Users</button>
+                                <button type="button" class="btn btn-info btn-block" onclick="navigateToUsers()">Go to Users</button>
+                                <button type="button" class="btn btn-warning btn-block" id="refreshUsersBtn">Refresh Users</button>
+                                <input type="text" id="userSearchInput" class="form-control" placeholder="Search by User ID" style="margin-top: 10px;">
+                                <div id="apiUserResult" style="display:none;">
+                                    <h5>Users:</h5>
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        <table class="table table-bordered table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>User ID</th>
+                                                    <th>Name</th>
+                                                    <th>Username</th>
+                                                    <th>Email</th>
+                                                    <th>Phone</th>
+                                                    <th>Website</th>
+                                                    <th>Company</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="apiUserTableBody">
+                                                <!-- Data from API will be inserted here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-info btn-block" onclick="navigateToPosts()">Go to Posts</button>
+                                <div id="apiResult" style="display:none;">
+                                    <h5>API Response in Table:</h5>
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        <table class="table table-bordered table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>User ID</th>
+                                                    <th>Name</th>
+                                                    <th>Email</th>
+                                                    <th>Post ID</th>
+                                                    <th>Post</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="apiTableBody">
+                                                <!-- Data from API will be inserted here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="apiError" class="alert alert-danger" role="alert" style="display:none;">
+                            <strong>Error:</strong> <span id="apiErrorMessage"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Viewing User Details -->
+    <div class="modal fade" id="userModal" tabindex="-1" role="dialog" aria-labelledby="userModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userModalLabel">User Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <h6><strong>User ID:</strong> <span id="modalUserId"></span></h6>
+                    <h6><strong>Name:</strong> <span id="modalUserName"></span></h6>
+                    <h6><strong>Username:</strong> <span id="modalUserUsername"></span></h6>
+                    <h6><strong>Email:</strong> <span id="modalUserEmail"></span></h6>
+                    <h6><strong>Phone:</strong> <span id="modalUserPhone"></span></h6>
+                    <h6><strong>Website:</strong> <span id="modalUserWebsite"></span></h6>
+                    <h6><strong>Company:</strong> <span id="modalUserCompany"></span></h6>
+                    <h6><strong>Address:</strong> <span id="modalUserAddress"></span></h6>
+                    <button class="btn btn-primary" id="fetchUserPostsBtn" onclick="fetchUserPosts()">Load Posts</button>
+                    <button class="btn btn-danger" id="deleteUserBtn" onclick="deleteUser()">Delete User</button>
+                    <div class="user-posts" id="userPostsSection" style="margin-top: 20px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- JavaScript to Fetch API Data, Insert into Table, and Enable Search -->
+    <script>
+        let originalData = []; // Variable to store original data from API
+        let userData = []; // To store users fetched from the API
+        let userId = null; // Variable to store the selected user's ID
+
+        function fetchData() {
+            const apiUrl = document.getElementById("apiUrl").value;
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    originalData = data; // Store fetched data
+                    displayData(data);
+                })
+                .catch(error => {
+                    showError(error.message);
+                });
+        }
+
+        function fetchUsers() {
+            const usersUrl = "https://jsonplaceholder.typicode.com/users"; // Fixed users API URL
+            fetch(usersUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    userData = data; // Store fetched users
+                    displayUsers(data);
+                })
+                .catch(error => {
+                    showError(error.message);
+                });
+        }
+
+        function displayData(data) {
+            const apiTableBody = document.getElementById("apiTableBody");
+            apiTableBody.innerHTML = ""; // Clear previous data
+            data.forEach(item => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${item.userId}</td>
+                    <td>${item.title}</td>
+                    <td>${item.body}</td>
+                    <td><button class="btn btn-info" onclick="showUserDetails(${item.userId})">View User</button></td>
+                `;
+                apiTableBody.appendChild(row);
+            });
+            document.getElementById("apiResult").style.display = "block"; // Show result section
+        }
+
+        function displayUsers(data) {
+            const apiUserTableBody = document.getElementById("apiUserTableBody");
+            apiUserTableBody.innerHTML = ""; // Clear previous data
+            data.forEach(user => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.name}</td>
+                    <td>${user.username}</td>
+                    <td>${user.email}</td>
+                    <td>${user.phone}</td>
+                    <td>${user.website}</td>
+                    <td>${user.company.name}</td>
+                    <td><button class="btn btn-info" onclick="showUserDetails(${user.id})">View</button></td>
+                `;
+                apiUserTableBody.appendChild(row);
+            });
+            document.getElementById("apiUserResult").style.display = "block"; // Show user result section
+        }
+
+        function showError(message) {
+            document.getElementById("apiErrorMessage").textContent = message;
+            document.getElementById("apiError").style.display = "block";
+        }
+
+        function navigateToUsers() {
+            document.getElementById("apiUserResult").style.display = "block";
+            document.getElementById("apiResult").style.display = "none"; // Hide posts section
+        }
+
+        function navigateToPosts() {
+            document.getElementById("apiResult").style.display = "block";
+            document.getElementById("apiUserResult").style.display = "none"; // Hide users section
+        }
+
+        function showUserDetails(id) {
+            const user = userData.find(user => user.id === id);
+            if (user) {
+                userId = user.id; // Store user ID
+                document.getElementById("modalUserId").textContent = user.id;
+                document.getElementById("modalUserName").textContent = user.name;
+                document.getElementById("modalUserUsername").textContent = user.username;
+                document.getElementById("modalUserEmail").textContent = user.email;
+                document.getElementById("modalUserPhone").textContent = user.phone;
+                document.getElementById("modalUserWebsite").textContent = user.website;
+                document.getElementById("modalUserCompany").textContent = user.company.name;
+                document.getElementById("modalUserAddress").textContent = `${user.address.street}, ${user.address.city}, ${user.address.zipcode}`;
+                $('#userModal').modal('show');
+            }
+        }
+
+        function fetchUserPosts() {
+            const postsUrl = `https://jsonplaceholder.typicode.com/posts?userId=${userId}`;
+            fetch(postsUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(posts => {
+                    const userPostsSection = document.getElementById("userPostsSection");
+                    userPostsSection.innerHTML = ""; // Clear previous posts
+                    posts.forEach(post => {
+                        const postDiv = document.createElement("div");
+                        postDiv.className = "post-content";
+                        postDiv.innerHTML = `
+                            <h6>${post.title}</h6>
+                            <p>${post.body}</p>
+                        `;
+                        userPostsSection.appendChild(postDiv);
+                    });
+                })
+                .catch(error => {
+                    showError(error.message);
+                });
+        }
+
+        function deleteUser() {
+            const userIndex = userData.findIndex(user => user.id === userId);
+            if (userIndex !== -1) {
+                userData.splice(userIndex, 1); // Remove user from array
+                alert("User deleted successfully!");
+                $('#userModal').modal('hide');
+                displayUsers(userData); // Refresh user display
+            } else {
+                alert("User not found!");
+            }
+        }
+
+        // Add event listeners for the buttons
+        document.getElementById("apiForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+            fetchData();
+        });
+
+        document.getElementById("fetchUsersBtn").addEventListener("click", function () {
+            fetchUsers();
+        });
+
+        document.getElementById("refreshPostsBtn").addEventListener("click", function () {
+            fetchData(); // Refresh posts
+        });
+
+        document.getElementById("refreshUsersBtn").addEventListener("click", function () {
+            fetchUsers(); // Refresh users
+        });
+
+        // Search functionality for users
+        document.getElementById("userSearchInput").addEventListener("input", function () {
+            const searchTerm = this.value.toLowerCase();
+            const filteredUsers = userData.filter(user => user.id.toString().includes(searchTerm));
+            displayUsers(filteredUsers);
+        });
+
+        // Automatically fetch users when the page loads
+        window.onload = function() {
+            fetchUsers(); // Fetch users directly from API when the page loads
+        };
+    </script>
+</body>
+</html>
